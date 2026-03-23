@@ -1,9 +1,24 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import BookmarkButton from '$lib/components/BookmarkButton.svelte';
 	import { markdownToHtml } from '$lib/markdown';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+	let progress = $state(0);
+
+	onMount(() => {
+		function updateProgress() {
+			const scrollY = window.scrollY;
+			const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+			progress = docHeight > 0 ? Math.min(100, Math.round((scrollY / docHeight) * 100)) : 0;
+		}
+
+		window.addEventListener('scroll', updateProgress, { passive: true });
+		updateProgress();
+
+		return () => window.removeEventListener('scroll', updateProgress);
+	});
 </script>
 
 {#if data.entry}
@@ -18,7 +33,7 @@
 		year: 'numeric'
 	})}
 
-	<div class="reading-progress" style="width: 36%;"></div>
+	<div class="reading-progress" style="width: {progress}%;"></div>
 
 	<main class="mx-auto grid max-w-[1440px] grid-cols-12 gap-8 px-6 pb-28 pt-10 md:px-16">
 		<aside class="col-span-12 hidden lg:col-span-2 lg:block">
