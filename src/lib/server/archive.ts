@@ -560,7 +560,7 @@ async function queryLatestEntries(db: Database, userId: string, limit?: number) 
 	return rows.map((row) => mapEntryRow(row));
 }
 
-async function queryFeedEntries(db: Database, userId: string) {
+async function queryFeedEntries(db: Database, userId: string, offset = 0, limit = 5) {
 	const unreadBoostDays = 5;
 
 	const rows = await db
@@ -587,7 +587,9 @@ async function queryFeedEntries(db: Database, userId: string) {
 				sql<number>`julianday(${entries.publishedAt}) + case when ${entries.readAt} is null then ${unreadBoostDays} else 0 end`
 			),
 			desc(entries.publishedAt)
-		);
+		)
+		.offset(offset)
+		.limit(limit);
 
 	return rows.map((row) => mapEntryRow(row));
 }
@@ -687,13 +689,13 @@ export async function getHomepageData(platform: App.Platform | undefined, user: 
 	};
 }
 
-export async function getFeedPageData(platform: App.Platform | undefined, user: ArchiveUser | null) {
+export async function getFeedPageData(platform: App.Platform | undefined, user: ArchiveUser | null, offset = 0, limit = 5) {
 	if (!hasDatabase(platform) || !user) {
 		return { usingDemo: true, entries: [] as ArchiveEntry[] };
 	}
 
 	const db = getDb(platform.env.DB);
-	return { usingDemo: false, entries: await queryFeedEntries(db, user.id) };
+	return { usingDemo: false, entries: await queryFeedEntries(db, user.id, offset, limit) };
 }
 
 export async function getLibraryPageData(platform: App.Platform | undefined, user: ArchiveUser | null) {

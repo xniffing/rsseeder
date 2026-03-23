@@ -4,10 +4,10 @@
 	let { pathname }: { pathname: string } = $props();
 
 	const navItems = [
-		{ href: '/library', label: 'Library', icon: Grid2x2 },
 		{ href: '/feed', label: 'Feed', icon: Newspaper },
+		{ href: '/saved', label: 'Saved', icon: Bookmark },
 		{ href: '/discover', label: 'Discover', icon: PlusCircle },
-		{ href: '/saved', label: 'Saved', icon: Bookmark }
+		{ href: '/library', label: 'Library', icon: Grid2x2 }
 	];
 
 	function isActive(href: string) {
