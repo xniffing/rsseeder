@@ -11,7 +11,11 @@
   },
   "vars": {
     // "GOOGLE_CLIENT_ID": "your-google-client-id",
-    // "GOOGLE_REDIRECT_URI": "http://localhost:5173/auth/google/callback"
+    // "GOOGLE_REDIRECT_URI": "http://localhost:5173/auth/google/callback",
+    // "CRON_SECRET": "generate-a-random-secret-here"
+  },
+  "triggers": {
+    "crons": ["0 * * * *"]
   },
   "d1_databases": [
     {

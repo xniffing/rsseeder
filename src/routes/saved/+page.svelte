@@ -18,6 +18,13 @@
 		{#each data.entries as entry}
 			<ArticleCard entry={entry} canBookmark={Boolean(data.user)} />
 		{/each}
+	{:else if !data.user}
+		<div class="surface-panel p-10">
+			<div class="editorial-kicker mb-4">Not Signed In</div>
+			<p class="max-w-xl font-body text-2xl leading-relaxed text-on-surface-variant">
+				<a href="/login" class="text-primary-fixed underline">Sign in</a> to bookmark articles and build your reading shelf.
+			</p>
+		</div>
 	{:else}
 		<div class="surface-panel p-10">
 			<div class="editorial-kicker mb-4">No Saved Entries</div>

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import favicon from '$lib/assets/favicon.svg';
@@ -9,6 +11,12 @@
 	import 'virtual:uno.css';
 
 	let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
+
+	onMount(() => {
+		if (browser && 'serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/sw.js');
+		}
+	});
 </script>
 
 <svelte:head>

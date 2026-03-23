@@ -1,16 +1,49 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import type { ArchiveFeed } from '$lib/types';
 	import SyncButton from './SyncButton.svelte';
 
 	let {
 		feed,
 		canSync = false,
+		canDelete = false,
 		featured = false
 	}: {
 		feed: ArchiveFeed;
 		canSync?: boolean;
+		canDelete?: boolean;
 		featured?: boolean;
 	} = $props();
+
+	let deleting = $state(false);
+	let deletionError = $state('');
+
+	async function deleteSource() {
+		if (!canDelete || deleting) return;
+		if (!confirm(`Remove ${feed.title}? This will delete its entries from the archive.`)) {
+			return;
+		}
+
+		deletionError = '';
+		deleting = true;
+
+		try {
+			const response = await fetch(`/api/feeds/${feed.id}`, { method: 'DELETE' });
+			if (!response.ok) {
+				const payload =
+					(await response.json().catch(() =>
+						({ error: 'Unable to delete feed' } as { error?: string })
+					)) as { error?: string };
+				throw new Error(payload.error ?? 'Unable to delete feed');
+			}
+
+			await invalidateAll();
+		} catch (error: unknown) {
+			deletionError = error instanceof Error ? error.message : 'Unable to delete feed';
+		} finally {
+			deleting = false;
+		}
+	}
 </script>
 
 <article class={`surface-panel ${featured ? 'p-0' : 'p-6'}`}>
@@ -40,7 +73,21 @@
 				<div class="mt-8 flex flex-wrap gap-4">
 					<a href={feed.siteUrl} class="secondary-button">Visit Source</a>
 					<SyncButton feedId={feed.id} {canSync} />
+					{#if canDelete}
+						<button
+							class="secondary-button border-error text-error"
+							onclick={deleteSource}
+							disabled={deleting}
+						>
+							{deleting ? 'Removing...' : 'Remove Source'}
+						</button>
+					{/if}
 				</div>
+				{#if deletionError}
+					<p class="mt-3 text-xs font-label uppercase tracking-[0.18rem] text-error">
+						{deletionError}
+					</p>
+				{/if}
 			</div>
 		</div>
 </article>

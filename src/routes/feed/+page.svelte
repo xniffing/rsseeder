@@ -18,7 +18,23 @@
 		<a href="/discover" class="primary-button">Add New Source</a>
 	</section>
 
-	{#each data.entries as entry}
-		<ArticleCard entry={entry} canBookmark={Boolean(data.user)} />
-	{/each}
+	{#if data.entries.length}
+		{#each data.entries as entry}
+			<ArticleCard entry={entry} canBookmark={Boolean(data.user)} />
+		{/each}
+	{:else if !data.user}
+		<div class="surface-panel p-10">
+			<div class="editorial-kicker mb-4">Not Signed In</div>
+			<p class="max-w-xl font-body text-2xl leading-relaxed text-on-surface-variant">
+				<a href="/login" class="text-primary-fixed underline">Sign in</a> to subscribe to feeds and see your reading stream here.
+			</p>
+		</div>
+	{:else}
+		<div class="surface-panel p-10">
+			<div class="editorial-kicker mb-4">No Entries Yet</div>
+			<p class="max-w-xl font-body text-2xl leading-relaxed text-on-surface-variant">
+				<a href="/discover" class="text-primary-fixed underline">Add a source</a> to start populating your feed.
+			</p>
+		</div>
+	{/if}
 </main>

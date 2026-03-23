@@ -4,7 +4,7 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<main class="min-h-screen bg-background px-6 py-16">
+<main class="min-h-screen bg-background px-6 py-16" style="padding-top: calc(4rem + env(safe-area-inset-top)); padding-bottom: calc(4rem + env(safe-area-inset-bottom));">
 	<div class="mx-auto grid max-w-5xl gap-12 md:grid-cols-12 md:items-center">
 		<div class="md:col-span-7">
 			<div class="editorial-kicker mb-4">Authentication / Google</div>

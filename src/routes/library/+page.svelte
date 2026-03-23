@@ -1,8 +1,32 @@
 <script lang="ts">
 	import SourceCard from '$lib/components/SourceCard.svelte';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+	let deletingFeedId = $state('');
+
+	async function deleteSource(feedId: string) {
+		if (!confirm('Delete this source and all its entries?')) return;
+
+		deletingFeedId = feedId;
+		try {
+			const response = await fetch(`/api/feeds/${feedId}`, { method: 'DELETE' });
+			if (!response.ok) {
+				const payload =
+					(await response.json().catch(() =>
+						({ error: 'Unable to delete feed' } as { error?: string })
+					)) as { error?: string };
+				throw new Error(payload.error ?? 'Unable to delete feed');
+			}
+
+			await invalidateAll();
+		} catch (error: unknown) {
+			console.error('delete source failed', error);
+		} finally {
+			deletingFeedId = '';
+		}
+	}
 
 	function primaryFeeds() {
 		return data.feeds.slice(0, 3);
@@ -41,9 +65,9 @@
 	</div>
 
 	<section class="mt-14 space-y-8">
-		{#each primaryFeeds() as feed}
-			<SourceCard feed={feed} canSync={Boolean(data.user)} featured />
-		{/each}
+			{#each primaryFeeds() as feed}
+				<SourceCard feed={feed} canSync={Boolean(data.user)} canDelete={Boolean(data.user)} featured />
+			{/each}
 	</section>
 
 	{#if secondaryFeeds().length}
@@ -62,8 +86,17 @@
 						<div class="md:col-span-3 font-label text-xs uppercase tracking-[0.16rem] text-secondary">
 							{feed.totalEntries} entries • {feed.unreadCount} unread
 						</div>
-						<div class="flex justify-start md:col-span-2 md:justify-end">
+			<div class="flex flex-wrap justify-start gap-3 md:col-span-2 md:justify-end">
 							<a href={feed.siteUrl} class="secondary-button">Open Site</a>
+							{#if data.user}
+								<button
+									class="secondary-button border-error text-error"
+									onclick={() => deleteSource(feed.id)}
+									disabled={deletingFeedId === feed.id}
+								>
+									{deletingFeedId === feed.id ? 'Removing...' : 'Remove'}
+								</button>
+							{/if}
 						</div>
 					</div>
 				{/each}

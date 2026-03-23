@@ -33,9 +33,9 @@
 			<div class="font-label text-[10px] uppercase tracking-[0.22rem] text-secondary">
 				Vol. 1 // ARCHIVE
 			</div>
-			{#if data.usingDemo}
+			{#if !data.user}
 				<p class="mt-6 max-w-xs font-body text-lg italic text-on-surface-variant md:ml-auto">
-					Demo archive is visible until Google auth and D1 are configured.
+					<a href="/login" class="text-primary-fixed underline">Sign in</a> to start building your personal archive.
 				</p>
 			{/if}
 		</div>

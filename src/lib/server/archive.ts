@@ -1,7 +1,7 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { XMLParser } from 'fast-xml-parser';
 import type { ArchiveEntry, ArchiveFeed, ArchiveUser, FeedIngestResult } from '$lib/types';
-import { demoEntries, demoFeeds, demoRecommendations } from './demo';
+import { demoRecommendations } from './demo';
 import { getDb, type Database } from './db';
 import { bookmarks, entries, feeds } from './db/schema';
 
@@ -527,6 +527,8 @@ function mapEntryRow(
 	};
 }
 
+const unreadBoostDays = 5;
+
 async function queryLatestEntries(db: Database, userId: string, limit?: number) {
 	const rows = await db
 		.select({
@@ -547,7 +549,12 @@ async function queryLatestEntries(db: Database, userId: string, limit?: number) 
 		.innerJoin(feeds, eq(entries.feedId, feeds.id))
 		.leftJoin(bookmarks, and(eq(bookmarks.entryId, entries.id), eq(bookmarks.userId, userId)))
 		.where(eq(feeds.userId, userId))
-		.orderBy(desc(entries.publishedAt))
+		.orderBy(
+			desc(
+				sql<number>`julianday(${entries.publishedAt}) + case when ${entries.readAt} is null then ${unreadBoostDays} else 0 end`
+			),
+			desc(entries.publishedAt)
+		)
 		.limit(limit ?? 100);
 
 	return rows.map((row) => mapEntryRow(row));
@@ -667,8 +674,8 @@ export async function getHomepageData(platform: App.Platform | undefined, user: 
 	if (!hasDatabase(platform) || !user) {
 		return {
 			usingDemo: true,
-			entries: demoEntries,
-			feeds: demoFeeds
+			entries: [] as ArchiveEntry[],
+			feeds: [] as ArchiveFeed[]
 		};
 	}
 
@@ -682,7 +689,7 @@ export async function getHomepageData(platform: App.Platform | undefined, user: 
 
 export async function getFeedPageData(platform: App.Platform | undefined, user: ArchiveUser | null) {
 	if (!hasDatabase(platform) || !user) {
-		return { usingDemo: true, entries: demoEntries };
+		return { usingDemo: true, entries: [] as ArchiveEntry[] };
 	}
 
 	const db = getDb(platform.env.DB);
@@ -691,7 +698,7 @@ export async function getFeedPageData(platform: App.Platform | undefined, user: 
 
 export async function getLibraryPageData(platform: App.Platform | undefined, user: ArchiveUser | null) {
 	if (!hasDatabase(platform) || !user) {
-		return { usingDemo: true, feeds: demoFeeds };
+		return { usingDemo: true, feeds: [] as ArchiveFeed[] };
 	}
 
 	const db = getDb(platform.env.DB);
@@ -703,7 +710,7 @@ export async function getDiscoverPageData(platform: App.Platform | undefined, us
 		return {
 			usingDemo: true,
 			recommendations: demoRecommendations,
-			currentFeeds: demoFeeds
+			currentFeeds: [] as ArchiveFeed[]
 		};
 	}
 
@@ -717,7 +724,7 @@ export async function getDiscoverPageData(platform: App.Platform | undefined, us
 
 export async function getSavedPageData(platform: App.Platform | undefined, user: ArchiveUser | null) {
 	if (!hasDatabase(platform) || !user) {
-		return { usingDemo: true, entries: demoEntries.filter((entry) => entry.bookmarked) };
+		return { usingDemo: true, entries: [] as ArchiveEntry[] };
 	}
 
 	const db = getDb(platform.env.DB);
@@ -730,8 +737,7 @@ export async function getEntryPageData(
 	entryId: string
 ) {
 	if (!hasDatabase(platform) || !user) {
-		const entry = demoEntries.find((item) => item.id === entryId) ?? demoEntries[0];
-		return { usingDemo: true, entry };
+		return { usingDemo: true, entry: null };
 	}
 
 	const db = getDb(platform.env.DB);
@@ -747,12 +753,12 @@ export async function getEntryPageData(
 }
 
 export async function listFeedsApi(platform: App.Platform | undefined, user: ArchiveUser | null) {
-	if (!hasDatabase(platform) || !user) return demoFeeds;
+	if (!hasDatabase(platform) || !user) return [] as ArchiveFeed[];
 	return queryFeeds(getDb(platform.env.DB), user.id);
 }
 
 export async function listEntriesApi(platform: App.Platform | undefined, user: ArchiveUser | null) {
-	if (!hasDatabase(platform) || !user) return demoEntries;
+	if (!hasDatabase(platform) || !user) return [] as ArchiveEntry[];
 	return queryLatestEntries(getDb(platform.env.DB), user.id);
 }
 
@@ -851,6 +857,41 @@ export async function addFeedFromUrl(
 	};
 }
 
+export async function deleteFeed(
+	platform: App.Platform | undefined,
+	user: ArchiveUser | null,
+	feedId: string
+) {
+	if (!hasDatabase(platform) || !user) {
+		throw new Error('Database is not configured');
+	}
+
+	const db = getDb(platform.env.DB);
+	const existing = await db
+		.select()
+		.from(feeds)
+		.where(and(eq(feeds.id, feedId), eq(feeds.userId, user.id)))
+		.limit(1);
+
+	if (!existing[0]) {
+		throw new Error('Feed not found');
+	}
+
+	const entriesToDelete = await db
+		.select({ id: entries.id })
+		.from(entries)
+		.where(eq(entries.feedId, feedId));
+
+	const entryIds = entriesToDelete.map((row) => row.id);
+
+	if (entryIds.length) {
+		await db.delete(bookmarks).where(inArray(bookmarks.entryId, entryIds));
+		await db.delete(entries).where(eq(entries.feedId, feedId));
+	}
+
+	await db.delete(feeds).where(eq(feeds.id, feedId));
+}
+
 export async function syncFeedById(platform: App.Platform | undefined, user: ArchiveUser | null, feedId: string) {
 	if (!hasDatabase(platform) || !user) {
 		throw new Error('Database is not configured');
@@ -895,4 +936,72 @@ export async function removeBookmark(platform: App.Platform | undefined, user: A
 	await db
 		.delete(bookmarks)
 		.where(and(eq(bookmarks.userId, user.id), eq(bookmarks.entryId, entryId)));
+}
+
+export async function syncAllFeeds(db: Database): Promise<{ synced: number; errors: number }> {
+	const allFeeds = await db.select().from(feeds).orderBy(feeds.lastSyncedAt);
+
+	let synced = 0;
+	let errors = 0;
+
+	for (const feed of allFeeds) {
+		try {
+			const parsed = await fetchFeedDocument(feed.feedUrl);
+			const parsedEntries = await enrichFeedEntries(parsed.entries);
+			const now = new Date().toISOString();
+
+			await db
+				.update(feeds)
+				.set({
+					title: parsed.title,
+					description: parsed.description,
+					siteUrl: parsed.siteUrl,
+					imageUrl: parsed.imageUrl,
+					category: feed.category || parsed.category || 'Independent',
+					language: parsed.language,
+					lastSyncedAt: now
+				})
+				.where(eq(feeds.id, feed.id));
+
+			for (const entry of parsedEntries) {
+				const record = {
+					id: createId('entry'),
+					feedId: feed.id,
+					sourceKey: `${feed.id}:${entry.externalId}`,
+					title: entry.title,
+					summary: entry.summary,
+					contentText: entry.contentText,
+					contentMarkdown: entry.contentMarkdown,
+					url: entry.url,
+					publishedAt: entry.publishedAt,
+					tagsJson: JSON.stringify(entry.tags),
+					readAt: null,
+					createdAt: now
+				};
+
+				await db
+					.insert(entries)
+					.values(record)
+					.onConflictDoUpdate({
+						target: entries.sourceKey,
+						set: {
+							title: record.title,
+							summary: record.summary,
+							contentText: record.contentText,
+							contentMarkdown: record.contentMarkdown,
+							url: record.url,
+							publishedAt: record.publishedAt,
+							tagsJson: record.tagsJson
+						}
+					});
+			}
+
+			synced++;
+		} catch (err) {
+			console.error(`Failed to sync feed ${feed.id} (${feed.feedUrl}):`, err);
+			errors++;
+		}
+	}
+
+	return { synced, errors };
 }

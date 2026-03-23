@@ -28,7 +28,7 @@
 	
 </script>
 
-<header class="sticky top-0 z-50 border-b border-outline-variant/40 bg-background/95 backdrop-blur">
+<header class="sticky top-0 z-50 border-b border-outline-variant/40 bg-background/95 backdrop-blur" style="padding-top: env(safe-area-inset-top);">
 	<div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 md:px-10">
 		<div class="flex items-center gap-4">
 			{#if compact}

@@ -15,7 +15,7 @@
 	}
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/50 bg-background md:hidden">
+<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/50 bg-background md:hidden" style="padding-bottom: env(safe-area-inset-bottom);">
 	<div class="grid grid-cols-4 px-4 py-3">
 		{#each navItems as item}
 			{@const Icon = item.icon}
