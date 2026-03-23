@@ -48,7 +48,22 @@
 
 <article class={`surface-panel ${featured ? 'p-0' : 'p-6'}`}>
 		<div class={`grid ${featured ? 'md:grid-cols-[1.3fr_1fr]' : 'gap-5'}`}>
-			<div class={featured ? 'min-h-72 bg-surface-container-high' : 'hidden'}></div>
+			{#if featured}
+				<div class="min-h-72 bg-surface-container-high overflow-hidden">
+					{#if feed.imageUrl}
+						<img
+							src={feed.imageUrl}
+							alt={feed.title}
+							class="h-full w-full object-cover"
+							referrerpolicy="no-referrer"
+						/>
+					{:else}
+						<div class="grid h-full w-full place-items-center">
+							<span class="font-headline text-6xl font-bold text-outline/30">{feed.title.slice(0, 1)}</span>
+						</div>
+					{/if}
+				</div>
+			{/if}
 			<div class="p-6 md:p-8">
 				<div class="flex items-center justify-between gap-4">
 					<div class="editorial-kicker">{feed.category}</div>

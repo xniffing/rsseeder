@@ -50,9 +50,11 @@
 	</section>
 
 	{#if entries.length}
-		{#each entries as entry (entry.id)}
-			<ArticleCard {entry} canBookmark={Boolean(data.user)} />
-		{/each}
+		<div class="[&>:first-child]:pt-0">
+			{#each entries as entry (entry.id)}
+				<ArticleCard {entry} canBookmark={Boolean(data.user)} />
+			{/each}
+		</div>
 
 		{#if !exhausted}
 			<div bind:this={sentinel} class="flex justify-center py-12">

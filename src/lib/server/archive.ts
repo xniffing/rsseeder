@@ -469,6 +469,41 @@ function mapAtomFeed(doc: Record<string, unknown>, feedUrl: string): ParsedFeed 
 	};
 }
 
+async function fetchSiteImage(siteUrl: string): Promise<string | null> {
+	try {
+		const response = await fetch(siteUrl, {
+			headers: { accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' },
+			redirect: 'follow'
+		});
+		if (!response.ok) return null;
+		const html = await response.text();
+
+		// Try og:image first
+		const ogImage = extractMetaContent(html, 'og:image', 'property');
+		if (ogImage) {
+			try {
+				return new URL(ogImage, siteUrl).href;
+			} catch {
+				return ogImage;
+			}
+		}
+
+		// Try apple-touch-icon or large favicon
+		const iconMatch = /<link[^>]+rel=["'](?:apple-touch-icon|icon)["'][^>]+href=["']([^"']+)["'][^>]*>/i.exec(html);
+		if (iconMatch?.[1]) {
+			try {
+				return new URL(iconMatch[1], siteUrl).href;
+			} catch {
+				return iconMatch[1];
+			}
+		}
+
+		return null;
+	} catch {
+		return null;
+	}
+}
+
 async function fetchFeedDocument(feedUrl: string) {
 	const response = await fetch(feedUrl, {
 		headers: {
@@ -483,10 +518,16 @@ async function fetchFeedDocument(feedUrl: string) {
 	const xml = await response.text();
 	const parsed = parser.parse(xml) as Record<string, unknown>;
 
-	if (parsed.rss) return mapRssFeed(parsed, feedUrl);
-	if (parsed.feed) return mapAtomFeed(parsed, feedUrl);
+	let feed: ParsedFeed;
+	if (parsed.rss) feed = mapRssFeed(parsed, feedUrl);
+	else if (parsed.feed) feed = mapAtomFeed(parsed, feedUrl);
+	else throw new Error('Unsupported feed format');
 
-	throw new Error('Unsupported feed format');
+	if (!feed.imageUrl) {
+		feed.imageUrl = await fetchSiteImage(feed.siteUrl);
+	}
+
+	return feed;
 }
 
 function createId(prefix: string) {
