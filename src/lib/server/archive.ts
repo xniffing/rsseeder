@@ -5,6 +5,50 @@ import { demoRecommendations } from './demo';
 import { getDb, type Database } from './db';
 import { bookmarks, entries, feeds } from './db/schema';
 
+const PRIVATE_IP_RANGES = [
+	/^127\./,
+	/^10\./,
+	/^172\.(1[6-9]|2\d|3[01])\./,
+	/^192\.168\./,
+	/^169\.254\./,
+	/^0\./,
+	/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+	/^::1$/,
+	/^fc00:/i,
+	/^fe80:/i,
+	/^fd/i
+];
+
+function validateExternalUrl(input: string): URL {
+	let url: URL;
+	try {
+		url = new URL(input);
+	} catch {
+		throw new Error('Invalid URL');
+	}
+
+	if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+		throw new Error('Only HTTP and HTTPS URLs are allowed');
+	}
+
+	const hostname = url.hostname.toLowerCase();
+
+	if (hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+		throw new Error('Internal hostnames are not allowed');
+	}
+
+	if (PRIVATE_IP_RANGES.some((re) => re.test(hostname))) {
+		throw new Error('Private IP addresses are not allowed');
+	}
+
+	return url;
+}
+
+function safeFetch(url: string, init?: RequestInit): Promise<Response> {
+	validateExternalUrl(url);
+	return fetch(url, { ...init, redirect: 'follow' });
+}
+
 type ParsedFeed = {
 	title: string;
 	description: string;
@@ -320,11 +364,10 @@ function shouldHydrateFromArticle(entry: ParsedFeed['entries'][number]) {
 }
 
 async function fetchArticleContent(url: string) {
-	const response = await fetch(url, {
+	const response = await safeFetch(url, {
 		headers: {
 			accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8'
-		},
-		redirect: 'follow'
+		}
 	});
 
 	if (!response.ok) {
@@ -471,9 +514,8 @@ function mapAtomFeed(doc: Record<string, unknown>, feedUrl: string): ParsedFeed 
 
 async function fetchSiteImage(siteUrl: string): Promise<string | null> {
 	try {
-		const response = await fetch(siteUrl, {
-			headers: { accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' },
-			redirect: 'follow'
+		const response = await safeFetch(siteUrl, {
+			headers: { accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8' }
 		});
 		if (!response.ok) return null;
 		const html = await response.text();
@@ -505,7 +547,7 @@ async function fetchSiteImage(siteUrl: string): Promise<string | null> {
 }
 
 async function fetchFeedDocument(feedUrl: string) {
-	const response = await fetch(feedUrl, {
+	const response = await safeFetch(feedUrl, {
 		headers: {
 			accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8'
 		}

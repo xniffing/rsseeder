@@ -1,4 +1,5 @@
 import { addFeedFromUrl, listFeedsApi } from '$lib/server/archive';
+import { rateLimit, rateLimitResponse } from '$lib/server/rate-limit';
 import type { RequestHandler } from './$types';
 
 function unauthorized() {
@@ -6,11 +7,15 @@ function unauthorized() {
 }
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
+	if (!locals.user) return unauthorized();
 	return Response.json({ feeds: await listFeedsApi(platform, locals.user) });
 };
 
 export const POST: RequestHandler = async ({ locals, platform, request }) => {
 	if (!locals.user) return unauthorized();
+
+	const { allowed } = rateLimit(`feed_add:${locals.user.id}`, { windowMs: 60_000, maxRequests: 5 });
+	if (!allowed) return rateLimitResponse();
 
 	try {
 		const payload = (await request.json()) as { url?: string; category?: string };

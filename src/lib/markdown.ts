@@ -1,10 +1,31 @@
 import rehypeKatex from 'rehype-katex';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
+
+// Extend the default sanitization schema to allow KaTeX classes and elements
+const sanitizeSchema = {
+	...defaultSchema,
+	tagNames: [
+		...(defaultSchema.tagNames ?? []),
+		'math', 'semantics', 'mrow', 'mi', 'mo', 'mn', 'ms', 'mtext',
+		'msup', 'msub', 'msubsup', 'mfrac', 'mroot', 'msqrt', 'mtable',
+		'mtr', 'mtd', 'mover', 'munder', 'munderover', 'mspace',
+		'annotation', 'span'
+	],
+	attributes: {
+		...defaultSchema.attributes,
+		'*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'style'],
+		img: [...(defaultSchema.attributes?.['img'] ?? []), 'src', 'alt', 'loading', 'referrerpolicy'],
+		a: [...(defaultSchema.attributes?.['a'] ?? []), 'href', 'target', 'rel'],
+		math: ['xmlns'],
+		annotation: ['encoding']
+	}
+};
 
 type HastNode = {
 	type?: string;
@@ -55,6 +76,7 @@ export function markdownToHtml(markdown: string, baseUrl?: string): string {
 		.use(remarkRehype)
 		.use(rehypeKatex)
 		.use(rebaseLinks, baseUrl)
+		.use(rehypeSanitize, sanitizeSchema)
 		.use(rehypeStringify);
 
 	return String(processor.processSync(markdown));
