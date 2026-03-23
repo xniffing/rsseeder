@@ -1,4 +1,5 @@
 import { syncFeedById } from '$lib/server/archive';
+import { safeErrorMessage } from '$lib/server/errors';
 import { rateLimit, rateLimitResponse } from '$lib/server/rate-limit';
 import type { RequestHandler } from './$types';
 
@@ -15,7 +16,7 @@ export const POST: RequestHandler = async ({ locals, params, platform }) => {
 		return Response.json(result);
 	} catch (error) {
 		return Response.json(
-			{ error: error instanceof Error ? error.message : 'Unable to sync feed' },
+			{ error: safeErrorMessage(error, 'Unable to sync feed') },
 			{ status: 400 }
 		);
 	}

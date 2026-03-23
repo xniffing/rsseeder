@@ -858,6 +858,8 @@ export async function addFeedFromUrl(
 
 	const feedUrl = input.url.trim();
 	if (!feedUrl) throw new Error('Feed URL is required');
+	if (feedUrl.length > 2048) throw new Error('Invalid URL');
+	if (input.category && input.category.length > 100) throw new Error('Category is too long');
 
 	const db = getDb(platform.env.DB);
 	const parsed = await fetchFeedDocument(feedUrl);

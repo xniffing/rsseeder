@@ -1,5 +1,5 @@
 import { Google, generateCodeVerifier, generateState } from 'arctic';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { getDb } from './db';
 import { sessions, users } from './db/schema';
 import type { ArchiveUser } from '$lib/types';
@@ -120,7 +120,13 @@ export async function createSession(db: ReturnType<typeof getDb>, userId: string
 	return { id, expiresAt };
 }
 
-export async function validateSession(db: ReturnType<typeof getDb>, sessionId: string): Promise<ArchiveUser | null> {
+const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+const SESSION_REFRESH_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 7; // refresh if < 7 days remaining
+
+export async function validateSession(
+	db: ReturnType<typeof getDb>,
+	sessionId: string
+): Promise<{ user: ArchiveUser; refreshedSession: { id: string; expiresAt: string } | null } | null> {
 	const rows = await db
 		.select({ session: sessions, user: users })
 		.from(sessions)
@@ -133,21 +139,40 @@ export async function validateSession(db: ReturnType<typeof getDb>, sessionId: s
 		return null;
 	}
 
-	if (new Date(row.session.expiresAt).getTime() <= Date.now()) {
+	const expiresAt = new Date(row.session.expiresAt).getTime();
+
+	if (expiresAt <= Date.now()) {
 		await db.delete(sessions).where(eq(sessions.id, sessionId));
 		return null;
 	}
 
-	return {
+	const user: ArchiveUser = {
 		id: row.user.id,
 		email: row.user.email,
 		name: row.user.name,
 		avatar: row.user.avatar
 	};
+
+	// Sliding expiration: rotate session if less than 7 days remaining
+	const remaining = expiresAt - Date.now();
+	if (remaining < SESSION_REFRESH_THRESHOLD_MS) {
+		await db.delete(sessions).where(eq(sessions.id, sessionId));
+		const newSession = await createSession(db, user.id);
+		return { user, refreshedSession: newSession };
+	}
+
+	return { user, refreshedSession: null };
 }
 
 export async function deleteSession(db: ReturnType<typeof getDb>, sessionId: string) {
 	await db.delete(sessions).where(eq(sessions.id, sessionId));
+}
+
+export async function purgeExpiredSessions(db: ReturnType<typeof getDb>) {
+	const result = await db
+		.delete(sessions)
+		.where(sql`${sessions.expiresAt} <= datetime('now')`);
+	return result;
 }
 
 export function setSessionCookie(

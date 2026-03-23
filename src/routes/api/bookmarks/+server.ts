@@ -1,4 +1,5 @@
 import { addBookmark } from '$lib/server/archive';
+import { safeErrorMessage } from '$lib/server/errors';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ locals, platform, request }) => {
@@ -8,7 +9,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
 	try {
 		const payload = (await request.json()) as { entryId?: string };
-		if (!payload.entryId) {
+		if (!payload.entryId || typeof payload.entryId !== 'string' || payload.entryId.length > 64) {
 			return Response.json({ error: 'entryId is required' }, { status: 400 });
 		}
 
@@ -16,7 +17,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		return Response.json({ ok: true });
 	} catch (error) {
 		return Response.json(
-			{ error: error instanceof Error ? error.message : 'Unable to bookmark entry' },
+			{ error: safeErrorMessage(error, 'Unable to bookmark entry') },
 			{ status: 400 }
 		);
 	}

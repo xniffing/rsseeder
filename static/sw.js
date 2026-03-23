@@ -1,6 +1,6 @@
-const CACHE_NAME = 'archive-v1';
+const CACHE_NAME = 'archive-v2';
 
-const PRECACHE_URLS = ['/feed', '/icon-192.png', '/icon-512.png'];
+const PRECACHE_URLS = ['/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -26,24 +26,16 @@ self.addEventListener('fetch', (event) => {
 
 	const url = new URL(request.url);
 
-	// Skip API routes and auth routes
-	if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
-
-	// Network-first for navigation (HTML pages)
-	if (request.mode === 'navigate') {
-		event.respondWith(
-			fetch(request)
-				.then((response) => {
-					const clone = response.clone();
-					caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-					return response;
-				})
-				.catch(() => caches.match(request))
-		);
+	// Skip API routes, auth routes, and navigation (authenticated HTML pages)
+	if (
+		url.pathname.startsWith('/api/') ||
+		url.pathname.startsWith('/auth/') ||
+		request.mode === 'navigate'
+	) {
 		return;
 	}
 
-	// Cache-first for static assets (JS, CSS, images, fonts)
+	// Cache-first for static assets only (JS, CSS, images, fonts)
 	if (
 		url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|webp|woff2?|ttf|eot)$/) ||
 		url.pathname.startsWith('/_app/')
@@ -53,8 +45,10 @@ self.addEventListener('fetch', (event) => {
 				(cached) =>
 					cached ||
 					fetch(request).then((response) => {
-						const clone = response.clone();
-						caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+						if (response.ok && !response.headers.has('set-cookie')) {
+							const clone = response.clone();
+							caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+						}
 						return response;
 					})
 			)

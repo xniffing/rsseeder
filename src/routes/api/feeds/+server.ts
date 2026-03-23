@@ -1,4 +1,5 @@
 import { addFeedFromUrl, listFeedsApi } from '$lib/server/archive';
+import { safeErrorMessage } from '$lib/server/errors';
 import { rateLimit, rateLimitResponse } from '$lib/server/rate-limit';
 import type { RequestHandler } from './$types';
 
@@ -27,7 +28,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		return Response.json(result);
 	} catch (error) {
 		return Response.json(
-			{ error: error instanceof Error ? error.message : 'Unable to add feed' },
+			{ error: safeErrorMessage(error, 'Unable to add feed') },
 			{ status: 400 }
 		);
 	}

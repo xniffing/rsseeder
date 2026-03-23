@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
-import { clearSessionCookie, readSessionCookie, validateSession } from '$lib/server/auth';
+import { clearSessionCookie, readSessionCookie, setSessionCookie, validateSession } from '$lib/server/auth';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -35,9 +35,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (sessionId && event.platform?.env.DB) {
 		try {
-			event.locals.user = await validateSession(getDb(event.platform.env.DB), sessionId);
-			if (!event.locals.user) {
+			const result = await validateSession(getDb(event.platform.env.DB), sessionId);
+			if (!result) {
 				clearSessionCookie(event.cookies);
+			} else {
+				event.locals.user = result.user;
+				if (result.refreshedSession) {
+					setSessionCookie(event.cookies, result.refreshedSession, event.url.protocol === 'https:');
+				}
 			}
 		} catch {
 			clearSessionCookie(event.cookies);

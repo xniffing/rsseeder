@@ -3,7 +3,7 @@ import { deleteSession, clearSessionCookie, readSessionCookie } from '$lib/serve
 import { getDb } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ cookies, platform }) => {
+export const POST: RequestHandler = async ({ cookies, platform }) => {
 	const sessionId = readSessionCookie(cookies);
 
 	if (sessionId && platform?.env.DB) {

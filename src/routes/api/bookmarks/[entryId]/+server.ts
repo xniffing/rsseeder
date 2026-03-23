@@ -1,4 +1,5 @@
 import { removeBookmark } from '$lib/server/archive';
+import { safeErrorMessage } from '$lib/server/errors';
 import type { RequestHandler } from './$types';
 
 export const DELETE: RequestHandler = async ({ locals, params, platform }) => {
@@ -11,7 +12,7 @@ export const DELETE: RequestHandler = async ({ locals, params, platform }) => {
 		return Response.json({ ok: true });
 	} catch (error) {
 		return Response.json(
-			{ error: error instanceof Error ? error.message : 'Unable to remove bookmark' },
+			{ error: safeErrorMessage(error, 'Unable to remove bookmark') },
 			{ status: 400 }
 		);
 	}

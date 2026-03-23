@@ -1,4 +1,5 @@
 import { syncAllFeeds } from '$lib/server/archive';
+import { purgeExpiredSessions } from '$lib/server/auth';
 import { getDb } from '$lib/server/db';
 import { rateLimit, rateLimitResponse } from '$lib/server/rate-limit';
 import type { RequestHandler } from './$types';
@@ -32,7 +33,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	const db = getDb(platform.env.DB);
-	const result = await syncAllFeeds(db);
+	const [result] = await Promise.all([
+		syncAllFeeds(db),
+		purgeExpiredSessions(db)
+	]);
 
 	return Response.json(result);
 };

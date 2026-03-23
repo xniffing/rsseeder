@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { getDb } from '$lib/server/db';
 import { deleteFeed as deleteFeedById } from '$lib/server/archive';
+import { safeErrorMessage } from '$lib/server/errors';
 
 function unauthorized() {
 	return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,7 +19,7 @@ export const DELETE: RequestHandler = async ({ locals, platform, params }) => {
 		return Response.json({ success: true });
 	} catch (error) {
 		return Response.json(
-			{ error: error instanceof Error ? error.message : 'Unable to delete feed' },
+			{ error: safeErrorMessage(error, 'Unable to delete feed') },
 			{ status: 400 }
 		);
 	}

@@ -51,11 +51,14 @@ function rebaseLinks(baseUrl?: string) {
 			if (node.type === 'element' && node.properties) {
 				if (node.tagName === 'a') {
 					node.properties.href = resolveUrl(node.properties.href, baseUrl);
+					node.properties.rel = 'noopener noreferrer';
+					node.properties.target = '_blank';
 				}
 
 				if (node.tagName === 'img') {
 					node.properties.src = resolveUrl(node.properties.src, baseUrl);
 					node.properties.loading = 'lazy';
+					node.properties.referrerpolicy = 'no-referrer';
 				}
 			}
 

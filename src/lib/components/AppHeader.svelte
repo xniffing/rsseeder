@@ -78,7 +78,9 @@
 						<div class="font-headline text-sm font-bold">{user.name}</div>
 					</div>
 				</div>
-				<a href="/auth/logout" class="secondary-button hidden md:inline-flex">Logout</a>
+				<form method="POST" action="/auth/logout" class="hidden md:block">
+					<button type="submit" class="secondary-button">Logout</button>
+				</form>
 			{:else if googleEnabled}
 				<a href="/login" class="primary-button hidden md:inline-flex">Sign In</a>
 			{:else}
