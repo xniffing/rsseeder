@@ -1,0 +1,24 @@
+{
+  "name": "rsseeder",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "assets": {
+    "directory": ".svelte-kit/cloudflare",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    // "GOOGLE_CLIENT_ID": "your-google-client-id",
+    // "GOOGLE_REDIRECT_URI": "http://localhost:5173/auth/google/callback"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rsseeder-db",
+      "database_id": "0962bc2e-ec69-476a-b739-f43eea7cb87c",
+      "migrations_dir": "./migrations"
+    }
+  ]
+}
