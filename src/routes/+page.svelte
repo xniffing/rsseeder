@@ -11,6 +11,10 @@
 	function remainder() {
 		return data.entries.slice(1);
 	}
+
+	const now = new Date();
+	const dateLabel = `${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+	const yearLabel = `${now.getFullYear()} // ARCHIVE`;
 </script>
 
 <main class="mx-auto max-w-6xl px-6 pb-20 pt-10 md:px-10 md:pt-14">
@@ -29,9 +33,9 @@
 			</p>
 		</div>
 		<div class="md:col-span-4 md:text-right">
-			<div class="font-label text-4xl font-light text-outline">03.26</div>
+			<div class="font-label text-4xl font-light text-outline">{dateLabel}</div>
 			<div class="font-label text-[10px] uppercase tracking-[0.22rem] text-secondary">
-				Vol. 1 // ARCHIVE
+				{yearLabel}
 			</div>
 			{#if !data.user}
 				<p class="mt-6 max-w-xs font-body text-lg italic text-on-surface-variant md:ml-auto">
