@@ -44,16 +44,9 @@
 </script>
 
 <main class="mx-auto max-w-6xl px-6 pb-24 pt-10 md:px-10 md:pt-14">
-	<section class="mb-16 flex flex-wrap items-end justify-between gap-8">
-		<div>
-			<div class="editorial-kicker mb-4">Continuous Feed</div>
-			<h1 class="page-title">READING CURRENT</h1>
-			<p class="mt-6 max-w-2xl font-body text-2xl leading-relaxed text-on-surface-variant">
-				Every indexed article in one stream, ordered by publication time and styled for
-				deliberate browsing.
-			</p>
-		</div>
-		<a href="/discover" class="primary-button">Add New Source</a>
+	<section class="mb-16">
+		<div class="editorial-kicker mb-4">Continuous Feed</div>
+		<h1 class="page-title">READING CURRENT</h1>
 	</section>
 
 	{#if entries.length}
