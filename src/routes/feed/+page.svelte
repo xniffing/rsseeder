@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import type { ArchiveEntry } from '$lib/types';
 	import type { PageData, Snapshot } from './$types';
@@ -41,8 +41,10 @@
 	};
 
 	$effect(() => {
-		if (matchesServerPrefix(entries, data.entries)) {
-			const nextEntries = [...entries];
+		const currentEntries = untrack(() => entries);
+
+		if (matchesServerPrefix(currentEntries, data.entries)) {
+			const nextEntries = [...currentEntries];
 			for (const [index, entry] of data.entries.entries()) {
 				nextEntries[index] = entry;
 			}
