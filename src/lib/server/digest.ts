@@ -300,7 +300,14 @@ function validateDigestResponse(userId: string, payload: RawDigestResponse, arti
 				? asStringArray(group.articleEntryIds, `groups[${groupIndex}].articleEntryIds`)
 				: [];
 			const rawArticles = Array.isArray(group.articles) ? (group.articles as RawDigestArticle[]) : [];
-			const articleIds = [...new Set([...explicitIds, ...rawArticles.map((item) => assertNonEmptyString(item.entryId, `groups[${groupIndex}].articles[].entryId`))])];
+			const articleIds = [
+				...new Set([
+					...explicitIds,
+					...rawArticles.map((item) =>
+						assertNonEmptyString(item.entryId, `groups[${groupIndex}].articles[].entryId`)
+					)
+				])
+			].filter((entryId) => articleMap.has(entryId));
 
 			if (articleIds.length === 0) {
 				return null;
@@ -314,7 +321,7 @@ function validateDigestResponse(userId: string, payload: RawDigestResponse, arti
 
 					const canonicalArticle = articleMap.get(entryId);
 					if (!canonicalArticle) {
-						throw new Error(`Digest referenced unknown article: ${entryId}`);
+						return null;
 					}
 
 					seenArticleIds.add(entryId);
