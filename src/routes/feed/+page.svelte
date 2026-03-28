@@ -2,15 +2,57 @@
 	import { onMount } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import type { ArchiveEntry } from '$lib/types';
-	import type { PageData } from './$types';
+	import type { PageData, Snapshot } from './$types';
 
 	const PAGE_SIZE = 5;
 
+	type FeedSnapshot = {
+		entries: ArchiveEntry[];
+		exhausted: boolean;
+	};
+
 	let { data }: { data: PageData } = $props();
-	let entries = $state<ArchiveEntry[]>([...data.entries]);
+	let entries = $state<ArchiveEntry[]>([]);
 	let loading = $state(false);
-	let exhausted = $state(data.entries.length < PAGE_SIZE);
+	let exhausted = $state(false);
 	let sentinel: HTMLDivElement | undefined = $state();
+
+	function matchesServerPrefix(current: ArchiveEntry[], incoming: ArchiveEntry[]) {
+		return current.length >= incoming.length && incoming.every((entry, index) => current[index]?.id === entry.id);
+	}
+
+	function toSnapshotEntry(entry: ArchiveEntry): ArchiveEntry {
+		return {
+			...entry,
+			contentText: '',
+			contentMarkdown: ''
+		};
+	}
+
+	export const snapshot: Snapshot<FeedSnapshot> = {
+		capture: () => ({
+			entries: entries.map(toSnapshotEntry),
+			exhausted
+		}),
+		restore: (value) => {
+			entries = value.entries;
+			exhausted = value.exhausted;
+		}
+	};
+
+	$effect(() => {
+		if (matchesServerPrefix(entries, data.entries)) {
+			const nextEntries = [...entries];
+			for (const [index, entry] of data.entries.entries()) {
+				nextEntries[index] = entry;
+			}
+			entries = nextEntries;
+			return;
+		}
+
+		entries = [...data.entries];
+		exhausted = data.entries.length < PAGE_SIZE;
+	});
 
 	async function loadMore() {
 		if (loading || exhausted) return;

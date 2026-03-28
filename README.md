@@ -21,18 +21,22 @@ wrangler d1 create rsseeder-db
 
 2. Copy the returned `database_id` into [wrangler.jsonc](/home/xniffing/Projects/rsseeder/wrangler.jsonc).
 
-3. Add local secrets to `.dev.vars`:
+3. Copy the local env template and fill in your values:
 
 ```sh
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+cp .dev.vars.example .dev.vars
 ```
 
-4. Configure public Google vars in [wrangler.jsonc](/home/xniffing/Projects/rsseeder/wrangler.jsonc) or in your local Wrangler env:
+Required local variables:
 
 - `GOOGLE_CLIENT_ID=your-google-client-id`
+- `GOOGLE_CLIENT_SECRET=your-google-client-secret`
 - `GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback`
+- `CRON_SECRET=generate-a-random-secret`
 
-5. Apply migrations and start the app:
+For production, set the same values with Wrangler vars/secrets and keep the D1 binding in [wrangler.jsonc](/home/xniffing/Projects/rsseeder/wrangler.jsonc).
+
+4. Apply migrations and start the app:
 
 ```sh
 bun run db:migrate:local
