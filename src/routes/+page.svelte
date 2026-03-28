@@ -26,8 +26,7 @@
 				LATEST BRIEFING <span class="text-primary-fixed">.</span>
 			</h1>
 			<p class="mt-6 max-w-3xl font-body text-2xl leading-relaxed text-on-surface-variant">
-				A grouped editorial digest of the latest reporting across your archive, organized by category
-				and marked with a secondary type label for each cluster.
+				The latest stories from across your archive, distilled into a clear daily briefing.
 			</p>
 		</div>
 		<div class="md:col-span-4 md:text-right">
