@@ -26,6 +26,11 @@ self.addEventListener('fetch', (event) => {
 
 	const url = new URL(request.url);
 
+	// Skip unsupported schemes (e.g. browser extensions)
+	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+		return;
+	}
+
 	// Skip API routes, auth routes, and navigation (authenticated HTML pages)
 	if (
 		url.pathname.startsWith('/api/') ||
@@ -44,10 +49,15 @@ self.addEventListener('fetch', (event) => {
 			caches.match(request).then(
 				(cached) =>
 					cached ||
-					fetch(request).then((response) => {
+					fetch(request).then(async (response) => {
 						if (response.ok && !response.headers.has('set-cookie')) {
 							const clone = response.clone();
-							caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+							try {
+								const cache = await caches.open(CACHE_NAME);
+								await cache.put(request, clone);
+							} catch {
+								// Ignore cache write failures for unsupported/ephemeral requests.
+							}
 						}
 						return response;
 					})

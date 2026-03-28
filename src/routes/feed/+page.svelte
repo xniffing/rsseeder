@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { untrack } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import type { ArchiveEntry } from '$lib/types';
 	import type { PageData, Snapshot } from './$types';
@@ -72,7 +72,7 @@
 		}
 	}
 
-	onMount(() => {
+	$effect(() => {
 		if (!sentinel) return;
 
 		const observer = new IntersectionObserver(
