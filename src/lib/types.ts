@@ -46,3 +46,73 @@ export interface FeedIngestResult {
 	feed: ArchiveFeed;
 	ingestedCount: number;
 }
+
+export const DIGEST_CATEGORIES = [
+	'Politics',
+	'World',
+	'Business',
+	'Technology',
+	'AI',
+	'Science',
+	'Security',
+	'Culture',
+	'Design',
+	'Media',
+	'Health',
+	'Environment',
+	'Society',
+	'Ideas',
+	'Markets',
+	'Policy',
+	'Startups',
+	'Open Source',
+	'Miscellaneous'
+] as const;
+
+export const DIGEST_TYPES = [
+	'News',
+	'Brief',
+	'Analysis',
+	'Essay',
+	'Opinion',
+	'Interview',
+	'Review',
+	'Report',
+	'Explainer',
+	'Feature'
+] as const;
+
+export type DigestCategory = (typeof DIGEST_CATEGORIES)[number];
+export type DigestType = (typeof DIGEST_TYPES)[number];
+
+export interface ArchiveDigestArticle {
+	entryId: string;
+	title: string;
+	feedTitle: string;
+	publishedAt: string;
+	url: string;
+	whyIncluded?: string;
+}
+
+export interface ArchiveDigestGroup {
+	category: DigestCategory;
+	type: DigestType;
+	headline: string;
+	summary: string;
+	articleCount: number;
+	sourceCount: number;
+	articles: ArchiveDigestArticle[];
+}
+
+export interface ArchiveDigest {
+	userId: string;
+	generatedAt: string;
+	inputWindow: {
+		perSourceLimit: number;
+	};
+	sourceCount: number;
+	entryCount: number;
+	overview: string;
+	signals: string[];
+	groups: ArchiveDigestGroup[];
+}

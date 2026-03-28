@@ -78,3 +78,14 @@ export const bookmarks = sqliteTable(
 		userEntryIdx: uniqueIndex('bookmarks_user_entry_idx').on(table.userId, table.entryId)
 	})
 );
+
+export const homepageDigests = sqliteTable('homepage_digests', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => users.id),
+	digestJson: text('digest_json'),
+	generatedAt: text('generated_at'),
+	inputSignature: text('input_signature'),
+	status: text('status').notNull().default('pending'),
+	lastError: text('last_error')
+});

@@ -1,4 +1,4 @@
-import type { ArchiveEntry, ArchiveFeed, Recommendation } from '$lib/types';
+import type { ArchiveDigest, ArchiveEntry, ArchiveFeed, Recommendation } from '$lib/types';
 
 export const demoFeeds: ArchiveFeed[] = [
 	{
@@ -94,6 +94,67 @@ export const demoEntries: ArchiveEntry[] = [
 		status: 'unread'
 	}
 ];
+
+export const demoHomepageDigest: ArchiveDigest = {
+	userId: 'demo_user',
+	generatedAt: '2026-03-23T08:00:00.000Z',
+	inputWindow: {
+		perSourceLimit: 10
+	},
+	sourceCount: 3,
+	entryCount: 3,
+	overview:
+		'Across the current archive, technology systems, intellectual culture, and interface design are converging around one recurring concern: how to preserve depth and human attention inside increasingly noisy environments.',
+	signals: ['Attention as infrastructure', 'Technology framed through culture', 'Design treated as editorial medium'],
+	groups: [
+		{
+			category: 'Technology',
+			type: 'Analysis',
+			headline: 'Systems are being reimagined as archives rather than streams',
+			summary:
+				'Coverage this cycle treats storage, computation, and interface design as long-horizon systems for preserving meaning, not just accelerating consumption.',
+			articleCount: 2,
+			sourceCount: 2,
+			articles: [
+				{
+					entryId: 'entry_demo_2',
+					title: 'Neural Ink: The Subtle Art of Biological Data Storage',
+					feedTitle: 'The Verge',
+					publishedAt: '2026-03-23T05:40:00.000Z',
+					url: 'https://example.com/articles/neural-ink',
+					whyIncluded: 'Shows archive thinking moving into biological computing.'
+				},
+				{
+					entryId: 'entry_demo_1',
+					title: 'The Architecture of Silence: Designing for Focus in the Age of Noise',
+					feedTitle: 'The Atlantic',
+					publishedAt: '2026-03-23T07:14:00.000Z',
+					url: 'https://example.com/articles/architecture-of-silence',
+					whyIncluded: 'Connects product design to concentration and information discipline.'
+				}
+			]
+		},
+		{
+			category: 'Ideas',
+			type: 'Essay',
+			headline: 'Writers are defending absence, restraint, and negative space',
+			summary:
+				'The most reflective writing in the archive argues that subtraction can be as meaningful as addition, especially in products built for reading and thought.',
+			articleCount: 1,
+			sourceCount: 1,
+			articles: [
+				{
+					entryId: 'entry_demo_3',
+					title: 'The Philosophy of the Void: Embracing Nothingness in Design',
+					feedTitle: 'Aeon',
+					publishedAt: '2026-03-22T18:00:00.000Z',
+					url: 'https://example.com/articles/void-design',
+					whyIncluded: 'Provides the philosophical frame behind the archive aesthetic.'
+				}
+			]
+		}
+	]
+};
 
 export const demoRecommendations: Recommendation[] = [
 	{

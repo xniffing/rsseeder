@@ -19,6 +19,8 @@ declare global {
 				GOOGLE_CLIENT_SECRET: string;
 				GOOGLE_REDIRECT_URI: string;
 				CRON_SECRET: string;
+				OPENROUTER_API_KEY?: string;
+				OPENROUTER_MODEL?: string;
 			};
 		}
 	}

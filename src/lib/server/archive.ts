@@ -1,7 +1,8 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { XMLParser } from 'fast-xml-parser';
 import type { ArchiveEntry, ArchiveFeed, ArchiveUser, FeedIngestResult } from '$lib/types';
-import { demoRecommendations } from './demo';
+import { demoEntries, demoFeeds, demoHomepageDigest, demoRecommendations } from './demo';
+import { getHomepageDigestState } from './digest';
 import { getDb, type Database } from './db';
 import { bookmarks, entries, feeds } from './db/schema';
 
@@ -759,16 +760,26 @@ export async function getHomepageData(platform: App.Platform | undefined, user: 
 	if (!hasDatabase(platform) || !user) {
 		return {
 			usingDemo: true,
-			entries: [] as ArchiveEntry[],
-			feeds: [] as ArchiveFeed[]
+			digest: demoHomepageDigest,
+			digestStatus: 'ready',
+			fallbackEntries: demoEntries,
+			feeds: demoFeeds
 		};
 	}
 
 	const db = getDb(platform.env.DB);
+	const [feedsList, digestState, fallbackEntries] = await Promise.all([
+		queryFeeds(db, user.id),
+		getHomepageDigestState(db, user.id),
+		queryLatestEntries(db, user.id, 12)
+	]);
+
 	return {
 		usingDemo: false,
-		entries: await queryLatestEntries(db, user.id, 12),
-		feeds: await queryFeeds(db, user.id)
+		digest: feedsList.length ? digestState.digest : null,
+		digestStatus: feedsList.length ? digestState.status : 'missing',
+		fallbackEntries,
+		feeds: feedsList
 	};
 }
 

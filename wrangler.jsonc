@@ -12,8 +12,12 @@
   "vars": {
     // "GOOGLE_CLIENT_ID": "your-google-client-id",
     // "GOOGLE_REDIRECT_URI": "http://localhost:5173/auth/google/callback",
-    // "CRON_SECRET": "generate-a-random-secret-here"
+    // "CRON_SECRET": "generate-a-random-secret-here",
+    // "OPENROUTER_MODEL": "openai/gpt-4o-mini"
   },
+  // Secrets (set via `wrangler secret put <NAME>`):
+  // GOOGLE_CLIENT_SECRET
+  // OPENROUTER_API_KEY
   "triggers": {
     "crons": ["0 * * * *"]
   },

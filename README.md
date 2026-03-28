@@ -1,6 +1,6 @@
 # ARCHIVE
 
-Editorial RSS reader built with SvelteKit 2, Cloudflare Workers, D1, Drizzle ORM, UnoCSS, and Google OAuth via Arctic.
+Editorial RSS reader built with SvelteKit 2, Cloudflare Workers, D1, Drizzle ORM, UnoCSS, Google OAuth via Arctic, and OpenRouter-powered homepage digests.
 
 ## Stack
 
@@ -9,6 +9,7 @@ Editorial RSS reader built with SvelteKit 2, Cloudflare Workers, D1, Drizzle ORM
 - D1 database with Drizzle ORM
 - UnoCSS with an editorial token system derived from `DESIGN-SYSTEM.MD`
 - Google OAuth using Arctic
+- OpenRouter for AI-generated homepage digests
 - `bun` for package management and scripts
 
 ## Local Setup
@@ -33,8 +34,12 @@ Required local variables:
 - `GOOGLE_CLIENT_SECRET=your-google-client-secret`
 - `GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback`
 - `CRON_SECRET=generate-a-random-secret`
+- `OPENROUTER_API_KEY=your-openrouter-api-key`
+- optional: `OPENROUTER_MODEL=openai/gpt-4o-mini`
 
 For production, set the same values with Wrangler vars/secrets and keep the D1 binding in [wrangler.jsonc](/home/xniffing/Projects/rsseeder/wrangler.jsonc).
+
+`OPENROUTER_API_KEY` should be configured as a Wrangler secret. The hourly cron sync uses it to precompute the homepage digest for each user.
 
 4. Apply migrations and start the app:
 
@@ -61,4 +66,6 @@ is fine for UI work, but OAuth and other authenticated flows need `bun run previ
 ## Notes
 
 - Without D1 or Google configured, the UI falls back to demo archive content for browsing.
+- The homepage digest is grouped globally across sources by category, with a secondary type label for each cluster.
+- Digest generation is precomputed during the hourly cron sync and stored in D1.
 - Mutating features such as feed ingest, sync, and bookmarks require authentication and a bound D1 database.

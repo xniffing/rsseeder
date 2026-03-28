@@ -1,6 +1,7 @@
 import { syncAllFeeds } from '$lib/server/archive';
 import { purgeExpiredSessions } from '$lib/server/auth';
 import { getDb } from '$lib/server/db';
+import { generateHomepageDigests } from '$lib/server/digest';
 import { rateLimit, rateLimitResponse } from '$lib/server/rate-limit';
 import type { RequestHandler } from './$types';
 
@@ -33,10 +34,14 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	const db = getDb(platform.env.DB);
-	const [result] = await Promise.all([
-		syncAllFeeds(db),
-		purgeExpiredSessions(db)
+	const syncResult = await syncAllFeeds(db);
+	const [, digestResult] = await Promise.all([
+		purgeExpiredSessions(db),
+		generateHomepageDigests(db, platform.env)
 	]);
 
-	return Response.json(result);
+	return Response.json({
+		...syncResult,
+		digests: digestResult
+	});
 };
