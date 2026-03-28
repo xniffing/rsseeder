@@ -279,63 +279,80 @@ function validateDigestResponse(userId: string, payload: RawDigestResponse, arti
 	}
 
 	const seenArticleIds = new Set<string>();
-	const groups = payload.groups.slice(0, DIGEST_MAX_GROUPS).map((rawGroup, groupIndex) => {
-		const group = rawGroup as RawDigestGroup;
-		const category = assertNonEmptyString(group.category, `groups[${groupIndex}].category`);
-		const type = assertNonEmptyString(group.type, `groups[${groupIndex}].type`);
-		const headline = assertNonEmptyString(group.headline, `groups[${groupIndex}].headline`);
-		const summary = assertNonEmptyString(group.summary, `groups[${groupIndex}].summary`);
+	const groups = payload.groups
+		.slice(0, DIGEST_MAX_GROUPS)
+		.map((rawGroup, groupIndex): ArchiveDigest['groups'][number] | null => {
+			const group = rawGroup as RawDigestGroup;
+			const category = assertNonEmptyString(group.category, `groups[${groupIndex}].category`);
+			const type = assertNonEmptyString(group.type, `groups[${groupIndex}].type`);
+			const headline = assertNonEmptyString(group.headline, `groups[${groupIndex}].headline`);
+			const summary = assertNonEmptyString(group.summary, `groups[${groupIndex}].summary`);
 
-		if (!isDigestCategory(category)) {
-			throw new Error(`Invalid digest category: ${category}`);
-		}
-
-		if (!isDigestType(type)) {
-			throw new Error(`Invalid digest type: ${type}`);
-		}
-
-		const explicitIds = Array.isArray(group.articleEntryIds)
-			? asStringArray(group.articleEntryIds, `groups[${groupIndex}].articleEntryIds`)
-			: [];
-		const rawArticles = Array.isArray(group.articles) ? (group.articles as RawDigestArticle[]) : [];
-		const articleIds = [...new Set([...explicitIds, ...rawArticles.map((item) => assertNonEmptyString(item.entryId, `groups[${groupIndex}].articles[].entryId`))])];
-
-		if (articleIds.length === 0) {
-			throw new Error(`Digest group ${groupIndex + 1} does not reference any articles`);
-		}
-
-		const articles: ArchiveDigestArticle[] = articleIds.map((entryId) => {
-			if (seenArticleIds.has(entryId)) {
-				throw new Error(`Digest article duplicated across groups: ${entryId}`);
-			}
-			seenArticleIds.add(entryId);
-
-			const canonicalArticle = articleMap.get(entryId);
-			if (!canonicalArticle) {
-				throw new Error(`Digest referenced unknown article: ${entryId}`);
+			if (!isDigestCategory(category)) {
+				throw new Error(`Invalid digest category: ${category}`);
 			}
 
-			const whyIncluded = rawArticles.find((item) => item.entryId === entryId)?.whyIncluded;
+			if (!isDigestType(type)) {
+				throw new Error(`Invalid digest type: ${type}`);
+			}
+
+			const explicitIds = Array.isArray(group.articleEntryIds)
+				? asStringArray(group.articleEntryIds, `groups[${groupIndex}].articleEntryIds`)
+				: [];
+			const rawArticles = Array.isArray(group.articles) ? (group.articles as RawDigestArticle[]) : [];
+			const articleIds = [...new Set([...explicitIds, ...rawArticles.map((item) => assertNonEmptyString(item.entryId, `groups[${groupIndex}].articles[].entryId`))])];
+
+			if (articleIds.length === 0) {
+				return null;
+			}
+
+			const articles = articleIds
+				.map((entryId) => {
+					if (seenArticleIds.has(entryId)) {
+						return null;
+					}
+
+					const canonicalArticle = articleMap.get(entryId);
+					if (!canonicalArticle) {
+						throw new Error(`Digest referenced unknown article: ${entryId}`);
+					}
+
+					seenArticleIds.add(entryId);
+					const whyIncluded = rawArticles.find((item) => item.entryId === entryId)?.whyIncluded;
+					const article: ArchiveDigestArticle = {
+						entryId,
+						title: canonicalArticle.title,
+						feedTitle: canonicalArticle.feedTitle,
+						publishedAt: canonicalArticle.publishedAt,
+						url: canonicalArticle.entryUrl,
+						whyIncluded:
+							typeof whyIncluded === 'string' && whyIncluded.trim()
+								? cleanText(whyIncluded, 140)
+								: undefined
+					};
+					return article;
+				})
+				.filter((article) => article !== null) as ArchiveDigestArticle[];
+
+			if (articles.length === 0) {
+				return null;
+			}
+
 			return {
-				entryId,
-				title: canonicalArticle.title,
-				feedTitle: canonicalArticle.feedTitle,
-				publishedAt: canonicalArticle.publishedAt,
-				url: canonicalArticle.entryUrl,
-				whyIncluded: typeof whyIncluded === 'string' && whyIncluded.trim() ? cleanText(whyIncluded, 140) : undefined
+				category,
+				type,
+				headline: cleanText(headline, 100),
+				summary: cleanText(summary, 360),
+				articleCount: articles.length,
+				sourceCount: new Set(articles.map((article) => article.feedTitle)).size,
+				articles
 			};
-		});
+		})
+		.filter((group) => group !== null) as ArchiveDigest['groups'];
 
-		return {
-			category,
-			type,
-			headline: cleanText(headline, 100),
-			summary: cleanText(summary, 360),
-			articleCount: articles.length,
-			sourceCount: new Set(articles.map((article) => article.feedTitle)).size,
-			articles
-		};
-	});
+	if (groups.length === 0) {
+		throw new Error('Digest response did not contain any usable groups');
+	}
 
 	return {
 		userId,
