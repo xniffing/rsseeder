@@ -12,6 +12,7 @@ import { entries, feeds, homepageDigests } from './db/schema';
 
 const DIGEST_ENTRY_LIMIT_PER_SOURCE = 10;
 const DIGEST_MAX_GROUPS = 8;
+const DIGEST_PROMPT_VERSION = 2;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
 
@@ -21,6 +22,8 @@ type DigestInputArticle = {
 	feedTitle: string;
 	title: string;
 	summary: string;
+	summarySource: 'summary' | 'content' | 'title';
+	summaryQuality: 'strong' | 'weak';
 	tags: string[];
 	publishedAt: string;
 	entryUrl: string;
@@ -57,8 +60,44 @@ function cleanText(input: string, maxLength = 280) {
 	return input.replace(/\s+/g, ' ').trim().slice(0, maxLength);
 }
 
-function normalizeSummary(summary: string) {
-	return cleanText(summary || 'No summary available.', 320);
+function isWeakSummary(summary: string, title: string) {
+	const normalizedSummary = cleanText(summary, 320).toLowerCase();
+	const normalizedTitle = cleanText(title, 180).toLowerCase();
+
+	if (!normalizedSummary) return true;
+	if (normalizedSummary === normalizedTitle) return true;
+	if (normalizedSummary.length < 48) return true;
+	if (/^(no summary available|untitled entry|read more|continue reading)$/i.test(normalizedSummary)) {
+		return true;
+	}
+
+	return false;
+}
+
+function buildDigestSummary(summary: string, contentText: string, title: string) {
+	const normalizedSummary = cleanText(summary, 320);
+	if (!isWeakSummary(normalizedSummary, title)) {
+		return {
+			summary: normalizedSummary,
+			summarySource: 'summary' as const,
+			summaryQuality: 'strong' as const
+		};
+	}
+
+	const normalizedContent = cleanText(contentText, 320);
+	if (normalizedContent && !isWeakSummary(normalizedContent, title)) {
+		return {
+			summary: normalizedContent,
+			summarySource: 'content' as const,
+			summaryQuality: 'strong' as const
+		};
+	}
+
+	return {
+		summary: cleanText(title, 180),
+		summarySource: 'title' as const,
+		summaryQuality: 'weak' as const
+	};
 }
 
 function stripCodeFences(input: string) {
@@ -112,6 +151,7 @@ async function getLatestDigestInputArticles(db: Database, userId: string): Promi
 			feedTitle: feeds.title,
 			title: entries.title,
 			summary: entries.summary,
+			contentText: entries.contentText,
 			tagsJson: entries.tagsJson,
 			publishedAt: entries.publishedAt,
 			entryUrl: entries.url
@@ -128,12 +168,16 @@ async function getLatestDigestInputArticles(db: Database, userId: string): Promi
 		const seen = counts.get(row.feedId) ?? 0;
 		if (seen >= DIGEST_ENTRY_LIMIT_PER_SOURCE) continue;
 		counts.set(row.feedId, seen + 1);
+		const title = cleanText(row.title, 180);
+		const digestSummary = buildDigestSummary(row.summary, row.contentText, title);
 		selected.push({
 			entryId: row.entryId,
 			feedId: row.feedId,
 			feedTitle: row.feedTitle,
-			title: cleanText(row.title, 180),
-			summary: normalizeSummary(row.summary),
+			title,
+			summary: digestSummary.summary,
+			summarySource: digestSummary.summarySource,
+			summaryQuality: digestSummary.summaryQuality,
 			tags: JSON.parse(row.tagsJson || '[]') as string[],
 			publishedAt: row.publishedAt,
 			entryUrl: row.entryUrl
@@ -146,6 +190,7 @@ async function getLatestDigestInputArticles(db: Database, userId: string): Promi
 async function buildInputSignature(userId: string, articles: DigestInputArticle[]) {
 	return sha256(
 		JSON.stringify({
+			version: DIGEST_PROMPT_VERSION,
 			userId,
 			articles: articles.map((article) => ({
 				entryId: article.entryId,
@@ -153,6 +198,8 @@ async function buildInputSignature(userId: string, articles: DigestInputArticle[
 				feedId: article.feedId,
 				title: article.title,
 				summary: article.summary,
+				summarySource: article.summarySource,
+				summaryQuality: article.summaryQuality,
 				tags: article.tags
 			}))
 		})
@@ -201,11 +248,12 @@ async function requestDigestFromOpenRouter(
 				{
 					role: 'system',
 					content:
-						'You are an editorial digest classifier and summarizer for an RSS reader. Classify every article using only the fixed category and type taxonomies provided. Cluster related stories across different sources. Write concise, factual, non-hallucinatory summaries. Preserve source diversity inside clusters. Return JSON only, with no prose outside the JSON object. Do not invent categories, types, article IDs, titles, or source names.'
+						'You are an editorial digest classifier and summarizer for an RSS reader. Classify every article using only the fixed category and type taxonomies provided. Cluster related stories across different sources. Write concise, factual, non-hallucinatory summaries. Preserve source diversity inside clusters. Some article summaries are missing, thin, or unreliable. When summaryQuality is weak, rely primarily on the title, tags, feed title, and agreement with other articles. Do not let one weak summary distort an entire category. Return JSON only, with no prose outside the JSON object. Do not invent categories, types, article IDs, titles, or source names.'
 				},
 				{
 					role: 'user',
 					content: JSON.stringify({
+						version: DIGEST_PROMPT_VERSION,
 						userId,
 						generatedAt: new Date().toISOString(),
 						categories: DIGEST_CATEGORIES,
@@ -220,6 +268,8 @@ async function requestDigestFromOpenRouter(
 							feedTitle: article.feedTitle,
 							title: article.title,
 							summary: article.summary,
+							summarySource: article.summarySource,
+							summaryQuality: article.summaryQuality,
 							tags: article.tags,
 							publishedAt: article.publishedAt,
 							entryUrl: article.entryUrl
